@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Design Pattern Tutor 🤖</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem 3rem;
+      background: #f5f5f9;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.3rem;
+    }
+    .subtitle {
+      color: #555;
+      font-size: 0.95rem;
+    }
+    section {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    section h2 {
+      margin-top: 0;
+      font-size: 1.3rem;
+    }
+    #chat-window {
+      border: 1px solid #ddd;
+      padding: 1rem;
+      height: 320px;
+      overflow-y: auto;
+      background: #fafafa;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    #chat-form {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+    #chat-input {
+      flex: 1;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.95rem;
+    }
+    button {
+      padding: 0.5rem 1.1rem;
+      border: none;
+      border-radius: 4px;
+      background: #1a73e8;
+      color: white;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .msg-user strong { color: #0b8043; }
+    .msg-bot strong  { color: #1a73e8; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Design Pattern Tutor 🤖</h1>
+    <div class="subtitle">
+      Ask about <strong>Strategy</strong>, <strong>Composite</strong>, or <strong>Observer</strong> design patterns,
+      or say <em>"quiz me"</em> to get practice questions.
+    </div>
+  </header>
+
+  <section>
+    <h2>About this chatbot</h2>
+    <p>
+      This chatbot is connected to a Dialogflow CX agent that I built to help explain
+      three common object-oriented design patterns: <strong>Strategy</strong>, <strong>Composite</strong>,
+      and <strong>Observer</strong>. It can:
+    </p>
+    <ul>
+      <li>Give explanations and real-world analogies for each pattern</li>
+      <li>Ask quiz questions and give feedback if you miss one</li>
+      <li>Suggest which pattern might fit a simple scenario</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Chat with the Design Pattern Tutor</h2>
+    <div id="chat-window">
+      <div class="msg-bot">
+        <strong>Bot:</strong>
+        Good day! Are you interested in learning about design patterns?
+        Say either strategy, composite, or observer to learn more!
+      </div>
+    </div>
+
+    <form id="chat-form">
+      <input id="chat-input" type="text" placeholder="Type your question..." autocomplete="off" required />
+      <button type="submit" id="send-btn">Send</button>
+    </form>
+  </section>
+
+  <script>
+    const backendUrl = "https://cx-agent-backend.onrender.com/chat";
+    const chatWindow = document.getElementById("chat-window");
+    const form = document.getElementById("chat-form");
+    const input = document.getElementById("chat-input");
+    const sendBtn = document.getElementById("send-btn");
+
+    // one session per browser tab
+    const sessionId = Math.random().toString(36).slice(2);
+
+    function addMessage(sender, text) {
+      const div = document.createElement("div");
+      div.className = sender === "You" ? "msg-user" : "msg-bot";
+      div.style.marginTop = "0.5rem";
+      div.innerHTML = "<strong>" + sender + ":</strong> " + text;
+      chatWindow.appendChild(div);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+
+      addMessage("You", text);
+      input.value = "";
+      input.focus();
+      sendBtn.disabled = true;
+
+      try {
+        const res = await fetch(backendUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, text }),
+        });
+
+        if (!res.ok) {
+          addMessage("Bot", "Oops, the server returned an error (" + res.status + ").");
+        } else {
+          const data = await res.json();
+          if (data.replies && data.replies.length) {
+            data.replies.forEach((r) => addMessage("Bot", r));
+          } else {
+            addMessage("Bot", "(Hmm, I didn’t get a reply this time.)");
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        addMessage("Bot", "Sorry, something went wrong talking to the server.");
+      } finally {
+        sendBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
